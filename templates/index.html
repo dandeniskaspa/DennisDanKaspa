@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>סוכן התודעה | Consciousness Agent</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <header>
+    <div class="header-orb"></div>
+    <div class="header-text">
+      <h1>סוכן התודעה</h1>
+      <p>Consciousness Agent · Bashar Teachings</p>
+    </div>
+  </header>
+
+  <div id="messages">
+    <div class="welcome" id="welcome">
+      <div class="orb-large"></div>
+      <h2>ברוך בואך</h2>
+      <p>אתה כבר שלם. הכל קיים עכשיו.<br>מה שאתה מחפש, מחפש אותך.</p>
+      <div class="prompt-chips">
+        <span class="chip" data-prompt="מה זה שפע אמיתי?">מה זה שפע?</span>
+        <span class="chip" data-prompt="אני מרגיש תקוע ולא יודע לאן ללכת">אני תקוע</span>
+        <span class="chip" data-prompt="איך אני יודע מה ההתלהבות הגבוהה ביותר שלי?">ההתלהבות שלי</span>
+        <span class="chip" data-prompt="תוביל אותי במדיטציה קצרה">מדיטציה</span>
+        <span class="chip" data-prompt="אני מפחד מהעתיד">פחד מהעתיד</span>
+        <span class="chip" data-prompt="מה עקרון המציאויות המקבילות?">מציאויות מקבילות</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <div class="input-row">
+      <textarea
+        id="user-input"
+        rows="1"
+        placeholder="שאל, שתף, חקור..."
+        autocomplete="off"
+        spellcheck="false"
+      ></textarea>
+      <button id="send-btn" title="שלח">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <p class="input-hint">Enter לשליחה &nbsp;·&nbsp; Shift+Enter לשורה חדשה</p>
+  </div>
+
+  <script>
+    const messagesEl = document.getElementById('messages');
+    const inputEl    = document.getElementById('user-input');
+    const sendBtn    = document.getElementById('send-btn');
+    const welcome    = document.getElementById('welcome');
+
+    // conversation history for multi-turn
+    let history = [];
+
+    // auto-resize textarea
+    inputEl.addEventListener('input', () => {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+    });
+
+    // Enter to send, Shift+Enter for newline
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    // chips
+    document.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        inputEl.value = chip.dataset.prompt;
+        inputEl.dispatchEvent(new Event('input'));
+        sendMessage();
+      });
+    });
+
+    function scrollToBottom() {
+      messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+    }
+
+    function appendMessage(role, text) {
+      if (welcome) welcome.style.display = 'none';
+
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('message', role);
+
+      const avatar = document.createElement('div');
+      avatar.classList.add('avatar');
+      avatar.textContent = role === 'bot' ? '✦' : '◎';
+
+      const bubble = document.createElement('div');
+      bubble.classList.add('bubble');
+      bubble.textContent = text;
+
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(bubble);
+      messagesEl.appendChild(wrapper);
+      scrollToBottom();
+      return bubble;
+    }
+
+    function appendTyping() {
+      if (welcome) welcome.style.display = 'none';
+
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('message', 'bot');
+      wrapper.id = 'typing-indicator';
+
+      const avatar = document.createElement('div');
+      avatar.classList.add('avatar');
+      avatar.textContent = '✦';
+
+      const bubble = document.createElement('div');
+      bubble.classList.add('bubble', 'typing-dots');
+      bubble.innerHTML = '<span></span><span></span><span></span>';
+
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(bubble);
+      messagesEl.appendChild(wrapper);
+      scrollToBottom();
+    }
+
+    function removeTyping() {
+      const el = document.getElementById('typing-indicator');
+      if (el) el.remove();
+    }
+
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text || sendBtn.disabled) return;
+
+      // clear & reset input
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      // show user bubble
+      appendMessage('user', text);
+
+      // add to history
+      history.push({ role: 'user', content: text });
+
+      // show typing
+      appendTyping();
+
+      try {
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: history }),
+        });
+
+        removeTyping();
+
+        const botBubble = appendMessage('bot', '');
+        let fullText = '';
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          for (const line of chunk.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6);
+            if (data === '[DONE]') break;
+            try {
+              const parsed = JSON.parse(data);
+              fullText += parsed.text;
+              botBubble.textContent = fullText;
+              scrollToBottom();
+            } catch (_) {}
+          }
+        }
+
+        // add assistant response to history
+        history.push({ role: 'assistant', content: fullText });
+
+      } catch (err) {
+        removeTyping();
+        appendMessage('bot', 'שגיאה בחיבור. בדוק את מפתח ה-API ונסה שוב.');
+        console.error(err);
+      } finally {
+        sendBtn.disabled = false;
+        inputEl.focus();
+      }
+    }
+
+    // focus on load
+    inputEl.focus();
+  </script>
+</body>
+</html>
