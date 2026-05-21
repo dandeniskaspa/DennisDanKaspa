@@ -10,17 +10,77 @@ import {
 } from 'remotion';
 
 interface PersonSlideProps {
-  photo: string;
+  photo?: string;
   name: string;
   title: string;
   accent?: string;
+  initials?: string;
 }
+
+// Renders the photo if it exists, otherwise a styled gradient placeholder
+const PhotoBox: React.FC<{photo?: string; accent: string; initials: string; style: React.CSSProperties}> = ({
+  photo,
+  accent,
+  initials,
+  style,
+}) => {
+  const [hasError, setHasError] = React.useState(false);
+
+  if (!photo || hasError) {
+    return (
+      <div
+        style={{
+          ...style,
+          background: `linear-gradient(145deg, ${accent}cc 0%, #050510 100%)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          gap: 16,
+        }}
+      >
+        {/* Silhouette icon */}
+        <div
+          style={{
+            width: 140,
+            height: 140,
+            borderRadius: '50%',
+            background: `${accent}44`,
+            border: `3px solid ${accent}88`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 56,
+            fontWeight: 900,
+            color: '#ffffff',
+            fontFamily: 'sans-serif',
+          }}
+        >
+          {initials}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Img
+      src={staticFile(photo)}
+      style={{
+        ...style,
+        objectFit: 'cover',
+        objectPosition: 'top center',
+      }}
+      onError={() => setHasError(true)}
+    />
+  );
+};
 
 export const PersonSlide: React.FC<PersonSlideProps> = ({
   photo,
   name,
   title,
   accent = '#7c3aed',
+  initials,
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -33,28 +93,24 @@ export const PersonSlide: React.FC<PersonSlideProps> = ({
   const photoOpacity = interpolate(photoSpring, [0, 1], [0, 1]);
   const textX = interpolate(textSpring, [0, 1], [-120, 0]);
   const textOpacity = interpolate(textDelay, [0, 20], [0, 1], {extrapolateRight: 'clamp'});
-
   const lineWidth = interpolate(textSpring, [0, 1], [0, 180]);
-
   const exitOpacity = interpolate(frame, [130, 150], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+
+  const personInitials = initials ?? name.split(' ').map((w) => w[0]).join('').slice(0, 2);
 
   return (
     <AbsoluteFill style={{opacity: exitOpacity}}>
-      {/* Blurred background */}
-      <AbsoluteFill
-        style={{
-          filter: 'blur(24px)',
-          transform: 'scale(1.12)',
-          opacity: 0.25,
-        }}
-      >
-        <Img
-          src={staticFile(photo)}
-          style={{width: '100%', height: '100%', objectFit: 'cover'}}
-        />
-      </AbsoluteFill>
+      {/* Blurred background — only when photo exists */}
+      {photo && (
+        <AbsoluteFill style={{filter: 'blur(24px)', transform: 'scale(1.12)', opacity: 0.2}}>
+          <Img
+            src={staticFile(photo)}
+            style={{width: '100%', height: '100%', objectFit: 'cover'}}
+          />
+        </AbsoluteFill>
+      )}
 
-      {/* Gradient overlay */}
+      {/* Dark gradient overlay */}
       <AbsoluteFill
         style={{
           background:
@@ -71,7 +127,7 @@ export const PersonSlide: React.FC<PersonSlideProps> = ({
         }}
       />
 
-      {/* Content */}
+      {/* Content row */}
       <AbsoluteFill
         style={{
           flexDirection: 'row',
@@ -82,7 +138,7 @@ export const PersonSlide: React.FC<PersonSlideProps> = ({
           paddingRight: 80,
         }}
       >
-        {/* Text block (RTL) */}
+        {/* Text (RTL) */}
         <div
           style={{
             flex: 1,
@@ -94,34 +150,12 @@ export const PersonSlide: React.FC<PersonSlideProps> = ({
             opacity: textOpacity,
           }}
         >
-          <div
-            style={{
-              fontFamily: 'sans-serif',
-              fontSize: 22,
-              letterSpacing: 6,
-              color: accent,
-              textTransform: 'uppercase',
-              marginBottom: 18,
-            }}
-          >
+          <div style={{fontFamily: 'sans-serif', fontSize: 22, letterSpacing: 6, color: accent, textTransform: 'uppercase', marginBottom: 18}}>
             מציגים
           </div>
-
-          <div
-            style={{
-              fontFamily: 'sans-serif',
-              fontSize: 64,
-              fontWeight: 900,
-              color: '#ffffff',
-              lineHeight: 1.15,
-              textAlign: 'right',
-              textShadow: '0 2px 20px rgba(0,0,0,0.5)',
-            }}
-          >
+          <div style={{fontFamily: 'sans-serif', fontSize: 64, fontWeight: 900, color: '#ffffff', lineHeight: 1.15, textAlign: 'right'}}>
             {name}
           </div>
-
-          {/* Animated accent line */}
           <div
             style={{
               width: lineWidth,
@@ -132,21 +166,12 @@ export const PersonSlide: React.FC<PersonSlideProps> = ({
               marginBottom: 20,
             }}
           />
-
-          <div
-            style={{
-              fontFamily: 'sans-serif',
-              fontSize: 32,
-              color: '#c4b5fd',
-              textAlign: 'right',
-              lineHeight: 1.4,
-            }}
-          >
+          <div style={{fontFamily: 'sans-serif', fontSize: 32, color: '#c4b5fd', textAlign: 'right', lineHeight: 1.4}}>
             {title}
           </div>
         </div>
 
-        {/* Photo */}
+        {/* Photo / placeholder */}
         <div
           style={{
             flexShrink: 0,
@@ -160,51 +185,21 @@ export const PersonSlide: React.FC<PersonSlideProps> = ({
             opacity: photoOpacity,
           }}
         >
-          <Img
-            src={staticFile(photo)}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'top center',
-            }}
+          <PhotoBox
+            photo={photo}
+            accent={accent}
+            initials={personInitials}
+            style={{width: '100%', height: '100%'}}
           />
         </div>
       </AbsoluteFill>
 
-      {/* Top gradient bar */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 5,
-          background: `linear-gradient(90deg, ${accent}, #00d4ff, ${accent})`,
-        }}
-      />
+      {/* Top bar */}
+      <div style={{position: 'absolute', top: 0, left: 0, right: 0, height: 5, background: `linear-gradient(90deg, ${accent}, #00d4ff, ${accent})`}} />
 
-      {/* Course tag bottom */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 36,
-          left: 0,
-          right: 0,
-          display: 'flex',
-          justifyContent: 'center',
-          opacity: textOpacity,
-        }}
-      >
-        <div
-          style={{
-            fontFamily: 'sans-serif',
-            fontSize: 20,
-            color: 'rgba(255,255,255,0.45)',
-            letterSpacing: 2,
-            direction: 'rtl',
-          }}
-        >
+      {/* Footer tag */}
+      <div style={{position: 'absolute', bottom: 36, left: 0, right: 0, display: 'flex', justifyContent: 'center', opacity: textOpacity}}>
+        <div style={{fontFamily: 'sans-serif', fontSize: 20, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, direction: 'rtl'}}>
           קורס בינה מלאכותית למטפלים
         </div>
       </div>

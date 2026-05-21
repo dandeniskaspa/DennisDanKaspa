@@ -10,12 +10,13 @@ import {
 import {PersonSlide} from './PersonSlide';
 
 // ─── עדכן כאן את שמות המשתתפים ותפקידיהם ───────────────────────────────────
+// אחרי הוספת תמונות ל-public/ — הוסף photo: 'person1.jpg' וכו' לכל אובייקט
 const PEOPLE = [
-  {photo: 'person1.jpg', name: 'דניס דן קספה', title: 'מומחה בינה מלאכותית', accent: '#7c3aed'},
-  {photo: 'person2.jpg', name: 'שם מנחה', title: 'תפקיד / התמחות', accent: '#0891b2'},
-  {photo: 'person3.jpg', name: 'שם מנחה', title: 'תפקיד / התמחות', accent: '#be185d'},
-  {photo: 'person4.jpg', name: 'שם מנחה', title: 'תפקיד / התמחות', accent: '#b45309'},
-  {photo: 'person5.jpg', name: 'שם מנחה', title: 'תפקיד / התמחות', accent: '#047857'},
+  {name: 'דניס דן קספה', title: 'מומחה בינה מלאכותית', accent: '#7c3aed'},
+  {name: 'שם מנחה', title: 'תפקיד / התמחות', accent: '#0891b2'},
+  {name: 'שם מנחה', title: 'תפקיד / התמחות', accent: '#be185d'},
+  {name: 'שם מנחה', title: 'תפקיד / התמחות', accent: '#b45309'},
+  {name: 'שם מנחה', title: 'תפקיד / התמחות', accent: '#047857'},
 ];
 // ────────────────────────────────────────────────────────────────────────────
 
